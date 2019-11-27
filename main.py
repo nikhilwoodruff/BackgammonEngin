@@ -1,6 +1,7 @@
 import random
 import numpy as np
 import copy
+import pickle
 
 class State:
     def __init__(self, default=True):
@@ -45,9 +46,16 @@ class State:
         print(output)
 
 class Engine:
-    def __init__(self):
+    def __init__(self, cache=None):
         self.gamma = 1e-1
-        self.val = {}
+        if cache == None:
+            self.val = {}
+            self.backup = 'cache.data'
+        else:
+            with open(cache, 'rb') as f:
+                self.val = pickle.load(f)
+                print('Loaded cache of size ' + str(len(self.val)))
+            self.backup = cache
     
     def eval(self, state):
         scores = [0, 0]
@@ -74,7 +82,7 @@ class Engine:
             return -2
         return 0
 
-    def moves(self, state, roll, swap=False,):
+    def moves(self, state, roll, swap=False):
         states = []
         points = list(range(26))
         if state.checkers[25 * int(state.player < 0)] != 0:
@@ -144,6 +152,8 @@ class Engine:
         for x in range(1, len(history)):
             val = history[x][1] * (1 - self.gamma) + history[x - 1][1] * self.gamma
             self.val[history[x][0]] = val
+        with open(self.backup, 'wb+') as f:
+            pickle.dump(self.val, f)
     
     def play_game_second(self, max_turns=int(1e+3)):
         state = State()
@@ -180,6 +190,7 @@ class Engine:
                 next_state.checkers[0] += 1
             else:
                 next_state.checkers[to_loc] -= 1
+            next_state.player *= -1
             state = next_state
             history.append((state, self.eval(state)))
             state.render()
@@ -197,5 +208,5 @@ class Engine:
         print('Dataset size: ' + str(len(self.val)))
         self.play_game_second()
 
-bkg = Engine()
+bkg = Engine('cache.data')
 bkg.train()
