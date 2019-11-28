@@ -56,6 +56,8 @@ class Engine:
                 self.val = pickle.load(f)
                 print('Loaded cache of size ' + str(len(self.val)))
             self.backup = cache
+        self.num_lookups = 0
+        self.num_additions = 0
     
     def eval(self, state):
         scores = [0, 0]
@@ -138,6 +140,9 @@ class Engine:
             for st in states:
                 if st not in self.val:
                     self.val[st] = self.eval(st)
+                    self.num_additions += 1
+                else:
+                    self.num_lookups += 1
                 if action == None:
                     action = (st, self.val[st])
                 elif (self.val[st] - action[1]) * state.player > 0:
@@ -202,11 +207,13 @@ class Engine:
             val = history[x][1] * (1 - self.gamma) + history[x - 1][1] * self.gamma
             self.val[history[x][0]] = val
 
-    def train(self):
-        for y in range(2):
+    def train(self, num_sims=16):
+        for y in range(num_sims):
             self.simulate_game()
-        print('Dataset size: ' + str(len(self.val)))
-        self.play_game_second()
+            print(self.num_lookups / (self.num_additions + self.num_lookups))
+            print('Simulated game ' + str(y))
+            print('Dataset size: ' + str(len(self.val)))
+        #self.play_game_second()
 
 bkg = Engine('cache.data')
-bkg.train()
+bkg.train(num_sims=64)
