@@ -47,7 +47,7 @@ class State:
 
 class Engine:
     def __init__(self, cache=None):
-        self.gamma = 1e-1
+        self.gamma = 0.8
         if cache == None:
             self.val = {}
             self.backup = 'cache.data'
@@ -128,8 +128,22 @@ class Engine:
             for second_move in self.moves(first_move, roll2 * state.player, swap=True):
                 states.append(second_move)
         return states
+
+    def minimax(self, state, depth, resilience=1):
+        if depth == 0:
+            return self.eval(state)
+        cmp_op = [min, max][int(state.player / 2 + 1)]
+        next_states = []
+        next_vals = []
+        for x in range(resilience):
+            next_states += self.next_states(state)
+        for x in next_states:
+            next_vals.append(self.minimax(x, depth - 1, resilience=resilience))
+        val = cmp_op(next_vals)
+        self.val[state] = val
+        return val
     
-    def simulate_game(self, max_turns=128, verbose=False):
+    def simulate_game(self, search_depth=2, max_turns=128, verbose=False):
         state = State()
         if verbose:
             state.render()
@@ -138,6 +152,7 @@ class Engine:
             states = self.next_states(state, verbose)
             action = None
             for st in states:
+                val = self.minimax(st, 2)
                 if st not in self.val:
                     self.val[st] = self.eval(st)
                     self.num_additions += 1
@@ -209,11 +224,11 @@ class Engine:
 
     def train(self, num_sims=16):
         for y in range(num_sims):
-            self.simulate_game()
+            self.simulate_game(verbose=True)
             print(self.num_lookups / (self.num_additions + self.num_lookups))
             print('Simulated game ' + str(y))
             print('Dataset size: ' + str(len(self.val)))
         #self.play_game_second()
 
-bkg = Engine('cache.data')
+bkg = Engine()
 bkg.train(num_sims=64)
